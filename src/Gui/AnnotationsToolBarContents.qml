@@ -19,6 +19,16 @@ ButtonGrid {
     readonly property AnnotationTool tool: SpectacleCore.annotationDocument.tool
     readonly property int toolType: tool?.type ?? AnnotationTool.NoTool
 
+    // Single-key tool shortcuts (R = Rectangle, etc.) must never fire while the user is
+    // typing into a text annotation. Mirrors the condition TextTool.qml uses to show its editor.
+    readonly property bool textEditing: {
+        const doc = SpectacleCore.annotationDocument
+        return (doc.selectedItem.options & AnnotationTool.TextOption)
+            && ((doc.tool.options & AnnotationTool.TextOption)
+                || doc.tool.type === AnnotationTool.SelectTool)
+    }
+    readonly property bool toolShortcutsEnabled: visible && enabled && !textEditing
+
     Loader {
         visible: active
         active: root.showUndoRedo
@@ -47,7 +57,13 @@ ButtonGrid {
                 && target.display === QQC.ToolButton.IconOnly
         }
         parent: target || root
-        text: target?.text ?? ""
+        text: {
+            if (!target) {
+                return ""
+            }
+            return target.shortcutKey ? i18nc("@info:tooltip tool name (shortcut key)", "%1 (%2)", target.text, target.shortcutKey)
+                                      : target.text
+        }
         visible: shouldShow(target)
         Binding on x {
             value: root.mirrored ?
@@ -70,6 +86,13 @@ ButtonGrid {
         focusPolicy: root.focusPolicy
         display: root.displayMode
         checkable: true
+        property string shortcutKey: ""
+        Shortcut {
+            sequence: button.shortcutKey
+            enabled: button.shortcutKey !== "" && root.toolShortcutsEnabled
+                && button.enabled && button.visible
+            onActivated: button.click()
+        }
         containmentMask: Item {
             parent: button
             readonly property rect rect: root.flow === Grid.TopToBottom ?
@@ -96,6 +119,7 @@ ButtonGrid {
         sourceComponent: ToolButton {
             QQC.ButtonGroup.group: toolGroup
             text: i18n("None")
+            shortcutKey: "M"
             icon.name: "transform-browse"
             onClicked: root.tool.type = AnnotationTool.NoTool
             // Setting checked in onCompleted so clicking the crop tool doesn't check this instead.
@@ -108,6 +132,7 @@ ButtonGrid {
         id: cropToolButton
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Crop")
+        shortcutKey: "C"
         icon.name: "transform-crop"
         onClicked: root.tool.type = AnnotationTool.NoTool
         // Setting checked in onCompleted so that 2 clicks aren't needed to check this.
@@ -118,6 +143,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Select")
+        shortcutKey: "V"
         icon.name: "edit-select"
         enabled: SpectacleCore.annotationDocument.undoStackDepth > 0
         checked: root.toolType === AnnotationTool.SelectTool
@@ -126,6 +152,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Freehand")
+        shortcutKey: "P"
         icon.name: "draw-freehand"
         checked: root.toolType === AnnotationTool.FreehandTool
         onClicked: root.tool.type = AnnotationTool.FreehandTool
@@ -133,6 +160,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Highlighter")
+        shortcutKey: "H"
         icon.name: "draw-highlight"
         checked: root.toolType === AnnotationTool.HighlighterTool
         onClicked: root.tool.type = AnnotationTool.HighlighterTool
@@ -140,6 +168,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Line")
+        shortcutKey: "L"
         icon.name: "draw-line"
         checked: root.toolType === AnnotationTool.LineTool
         onClicked: root.tool.type = AnnotationTool.LineTool
@@ -147,6 +176,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Arrow")
+        shortcutKey: "A"
         icon.name: "draw-arrow"
         checked: root.toolType === AnnotationTool.ArrowTool
         onClicked: root.tool.type = AnnotationTool.ArrowTool
@@ -154,6 +184,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Rectangle")
+        shortcutKey: "R"
         icon.name: "draw-rectangle"
         checked: root.toolType === AnnotationTool.RectangleTool
         onClicked: root.tool.type = AnnotationTool.RectangleTool
@@ -161,6 +192,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Ellipse")
+        shortcutKey: "E"
         icon.name: "draw-ellipse"
         checked: root.toolType === AnnotationTool.EllipseTool
         onClicked: root.tool.type = AnnotationTool.EllipseTool
@@ -168,6 +200,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Pixelate")
+        shortcutKey: "X"
         icon.name: "pixelate"
         checked: root.toolType === AnnotationTool.PixelateTool
         onClicked: root.tool.type = AnnotationTool.PixelateTool
@@ -175,6 +208,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Blur")
+        shortcutKey: "B"
         icon.name: "blur"
         checked: root.toolType === AnnotationTool.BlurTool
         onClicked: root.tool.type = AnnotationTool.BlurTool
@@ -182,6 +216,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Text")
+        shortcutKey: "T"
         icon.name: "draw-text"
         checked: root.toolType === AnnotationTool.TextTool
         onClicked: root.tool.type = AnnotationTool.TextTool
@@ -189,6 +224,7 @@ ButtonGrid {
     ToolButton {
         QQC.ButtonGroup.group: toolGroup
         text: i18n("Number")
+        shortcutKey: "N"
         icon.name: "draw-number"
         checked: root.toolType === AnnotationTool.NumberTool
         onClicked: root.tool.type = AnnotationTool.NumberTool
