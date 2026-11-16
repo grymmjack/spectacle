@@ -1,0 +1,10 @@
+# Build environment for this fork's .deb: Debian trixie (this system's release) with
+# kde-spectacle's build dependencies and Tesseract. Used by packaging/build-deb.sh.
+FROM docker.io/library/debian:trixie
+RUN sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources \
+ && apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      build-essential devscripts equivs ccache git \
+      libtesseract-dev libleptonica-dev tesseract-ocr tesseract-ocr-eng \
+ && DEBIAN_FRONTEND=noninteractive apt-get build-dep -y kde-spectacle \
+ && rm -rf /var/lib/apt/lists/*
