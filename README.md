@@ -46,8 +46,17 @@ package.
 
 ### Install
 
-You need Debian 13 (trixie) with Plasma 6.3, `git` and `podman`. The package
-is built in a trixie container, so no build dependencies go on your system.
+Only for Debian 13 (trixie) with Plasma 6.3. The quick way is the ready-made
+package from the [releases page](https://github.com/grymmjack/spectacle/releases):
+
+```sh
+wget https://github.com/grymmjack/spectacle/releases/download/v6.3.6-mine2/kde-spectacle_6.3.6-0+mine2_amd64.deb
+sudo apt install -y ./kde-spectacle_6.3.6-0+mine2_amd64.deb
+sudo apt-mark hold kde-spectacle
+```
+
+To build it yourself instead you need `git` and `podman`. The package is built
+in a trixie container, so no build dependencies go on your system.
 
 ```sh
 git clone -b mine https://github.com/grymmjack/spectacle.git
