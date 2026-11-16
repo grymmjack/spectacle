@@ -7,7 +7,9 @@
 # Then install it and keep apt from replacing it with Debian's version:
 #   sudo apt install ./packaging/out/kde-spectacle_<version>_amd64.deb
 #   sudo apt-mark hold kde-spectacle
-# Bump the version in debian/changelog for each new build you install.
+# Bump the version in debian/changelog for each new build you install. Once it's held,
+# upgrading to a newer build needs: sudo apt install -y --allow-change-held-packages ./<new .deb>
+# (the hold stays in place).
 set -euo pipefail
 repo=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 out=$(realpath -m "${1:-$repo/packaging/out}")
