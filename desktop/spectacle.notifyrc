@@ -308,3 +308,8 @@ Comment[x-test]=xxA recording was captured and savedxx
 Comment[zh_CN]=已录制并保存新的屏幕录像
 Comment[zh_TW]=新的螢幕錄製已擷取並儲存
 Action=Popup
+
+[Event/ocrTextExtracted]
+Name=Text Extracted
+Comment=Text has been extracted from image using OCR
+Action=Popup

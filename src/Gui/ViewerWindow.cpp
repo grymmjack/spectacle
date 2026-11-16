@@ -44,6 +44,9 @@ ViewerWindow::ViewerWindow(Mode mode, QQmlEngine *engine, QWindow *parent)
             copyImageScaled(percent);
         });
     }
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_O), this, this, [] {
+        SpectacleCore::instance()->startOcrExtraction();
+    });
     new QShortcut(QKeySequence::Print, this, this, &ViewerWindow::showPrintDialog);
 
     m_context->setContextObject(this); // Must be before QML is initialized
@@ -205,6 +208,12 @@ void ViewerWindow::showRecordingFailedMessage(const QString &messageArgument)
 void ViewerWindow::showQRCodeScannedMessage(const QVariant &messageArgument)
 {
     showInlineMessage("%1/Gui/QRCodeScannedMessage.qml"_L1.arg(SPECTACLE_QML_PATH), {{"messageArgument"_L1, messageArgument}});
+}
+
+void ViewerWindow::showOcrMessage(const QString &messageArgument, bool error)
+{
+    showInlineMessage("%1/Gui/OcrMessage.qml"_L1.arg(SPECTACLE_QML_PATH),
+                      {{"messageArgument"_L1, messageArgument}, {"error"_L1, error}});
 }
 
 void ViewerWindow::showImageSharedMessage(int errorCode, const QString &messageArgument)

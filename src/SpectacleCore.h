@@ -14,6 +14,7 @@
 #include "CaptureModeModel.h"
 #include "CommandLineOptions.h"
 #include "ExportManager.h"
+#include "OcrManager.h"
 #include "Gui/Annotations/AnnotationDocument.h"
 #include "Gui/CaptureWindow.h"
 #include "Gui/ViewerWindow.h"
@@ -40,6 +41,8 @@ class SpectacleCore : public QObject
     Q_PROPERTY(bool videoMode READ videoMode NOTIFY videoModeChanged)
     Q_PROPERTY(QUrl currentVideo READ currentVideo NOTIFY currentVideoChanged)
     Q_PROPERTY(AnnotationDocument *annotationDocument READ annotationDocument CONSTANT FINAL)
+    Q_PROPERTY(bool ocrAvailable READ ocrAvailable NOTIFY ocrStatusChanged FINAL)
+    Q_PROPERTY(OcrManager::OcrStatus ocrStatus READ ocrStatus NOTIFY ocrStatusChanged FINAL)
 
 public:
     enum class StartMode {
@@ -78,6 +81,15 @@ public:
     QString recordedTime() const;
     Q_INVOKABLE QString timeFromMilliseconds(qint64 milliseconds) const;
 
+    bool ocrAvailable() const;
+    OcrManager::OcrStatus ocrStatus() const;
+    /**
+     * Extract text (OCR) from the current screenshot, including annotations, and copy it to the clipboard.
+     * From the capture overlay, this accepts the current selection first.
+     * @param languageCode one-off Tesseract language (e.g. "deu"); empty uses Settings::ocrLanguages()
+     */
+    Q_INVOKABLE bool startOcrExtraction(const QString &languageCode = QString());
+
     ExportManager::Actions autoExportActions() const;
 
     void activateAction(const QString &actionName, const QVariant &parameter);
@@ -109,6 +121,7 @@ public Q_SLOTS:
     void showErrorMessage(const QString &message);
 
 Q_SIGNALS:
+    void ocrStatusChanged();
     void screenCaptureUrlChanged();
     void captureTimeRemainingChanged();
     void captureProgressChanged();
@@ -121,6 +134,10 @@ Q_SIGNALS:
     void recordedTimeChanged();
 
 private:
+    bool performOcrExtraction(const QString &languageCode);
+    void showOcrMessage(const QString &text, bool error = false);
+    bool m_ocrExportInProgress = false;
+
     explicit SpectacleCore(QObject *parent = nullptr);
 
     enum class ScreenCapture {

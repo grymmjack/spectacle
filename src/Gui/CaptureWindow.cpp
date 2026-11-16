@@ -37,6 +37,9 @@ CaptureWindow::CaptureWindow(Mode mode, QScreen *screen, QQmlEngine *engine, QWi
             copyImageScaled(percent);
         });
     }
+    new QShortcut(QKeySequence(Qt::CTRL | Qt::Key_O), this, this, [] {
+        SpectacleCore::instance()->startOcrExtraction();
+    });
     new QShortcut(QKeySequence::Print, this, this, &CaptureWindow::showPrintDialog);
 
     m_context->setContextObject(this); // Must be before QML is initialized

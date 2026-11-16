@@ -41,6 +41,7 @@ public:
     void showScreenshotFailedMessage(const QString &messageArgument);
     void showRecordingFailedMessage(const QString &messageArgument);
     void showQRCodeScannedMessage(const QVariant &messageArgument);
+    void showOcrMessage(const QString &messageArgument, bool error = false);
 
     Q_INVOKABLE void startDrag();
 

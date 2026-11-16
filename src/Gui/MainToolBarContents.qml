@@ -98,6 +98,12 @@ ButtonGrid {
         CopyPercentButton { percent: 200; shortcut: "Ctrl+Alt+Shift+C" }
     }
 
+    // OCR: copy the screenshot's text to the clipboard. Ctrl+O (Shottr uses Cmd+O).
+    ToolButton {
+        visible: !SpectacleCore.videoMode && SpectacleCore.ocrAvailable
+        action: OcrAction {}
+    }
+
     // We only show this in video mode to save space in screenshot mode
     ToolButton {
         visible: SpectacleCore.videoMode

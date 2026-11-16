@@ -73,6 +73,10 @@
         </choices>
         <default>UntilClosed</default>
     </entry>
+    <entry name="ocrLanguages" type="StringList">
+        <label>Default languages for OCR text recognition</label>
+        <default>eng</default>
+    </entry>
 </group>
 <group name="GuiConfig">
     <entry name="selectionRect" type="RectF">

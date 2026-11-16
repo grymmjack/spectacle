@@ -27,6 +27,7 @@ target_sources(spectacle PRIVATE
     RecordingModeModel.cpp
     ExportManager.cpp
     Geometry.cpp
+    OcrManager.cpp
     PlasmaVersion.cpp
     ScreenShotEffect.cpp
     SpectacleCore.cpp
@@ -64,6 +65,10 @@ target_sources(spectacle PRIVATE
     Platforms/VideoPlatformWayland.cpp
     Platforms/screencasting.cpp
 )
+
+# Tesseract OCR (backported from upstream Plasma 6.6+)
+target_compile_options(spectacle PRIVATE -fexceptions)
+target_link_libraries(spectacle PRIVATE PkgConfig::TESSERACT)
 
 if(XCB_FOUND)
     target_sources(spectacle PRIVATE Platforms/ImagePlatformXcb.cpp Platforms/ImagePlatformXcb.h)
@@ -172,6 +177,8 @@ qt_target_qml_sources(spectacle
     Gui/InlineMessage.qml
     Gui/LocationCopiedMessage.qml
     Gui/Magnifier.qml
+    Gui/OcrAction.qml
+    Gui/OcrMessage.qml
     Gui/MainToolBarContents.qml
     Gui/Outline.qml
     Gui/QRCodeScannedMessage.qml

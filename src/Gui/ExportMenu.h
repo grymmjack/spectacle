@@ -51,6 +51,8 @@ private:
     Q_SLOT void openScreenshotsFolder();
 
     void getKServiceItems();
+    void buildOcrLanguageSubmenu();
+    QMenu *m_ocrLanguageMenu = nullptr;
 
 #ifdef PURPOSE_FOUND
     void loadPurposeMenu();

@@ -57,10 +57,15 @@
 #include <QScopedPointer>
 #include <QScreen>
 #include <QSystemTrayIcon>
+#include <QTemporaryFile>
+#include <QTextStream>
 #include <QTimer>
 #include <QtMath>
 #include <qobject.h>
 #include <qobjectdefs.h>
+
+// Notifications still showing; the app is kept alive until they expire.
+static QList<KNotification *> notifications;
 
 using namespace Qt::StringLiterals;
 
@@ -163,7 +168,12 @@ SpectacleCore::SpectacleCore(QObject *parent)
             showViewerIfGuiMode();
             SpectacleWindow::setTitleForAll(SpectacleWindow::Unsaved);
             ExportManager::instance()->scanQRCode();
-            const auto &exportActions = actions & ExportManager::AnyAction ? actions : autoExportActions();
+            auto exportActions = actions & ExportManager::AnyAction ? actions : autoExportActions();
+            if (m_ocrExportInProgress) {
+                // The clipboard is for the extracted text, not the image.
+                exportActions.setFlag(ExportManager::CopyImage, false);
+                m_ocrExportInProgress = false;
+            }
             ExportManager::instance()->exportImage(exportActions, outputUrl());
         }
     });
@@ -454,6 +464,76 @@ SpectacleCore::SpectacleCore(QObject *parent)
     };
     connect(exportManager, &ExportManager::qrCodeScanned, this, onQRCodeScanned);
 
+    // OCR (backported from upstream Plasma 6.6+, adapted to this version's inline messages)
+    auto onOcrTextRecognized = [this](const QString &text, const QStringList &languageCodes, bool success) {
+        if (!success) {
+            showOcrMessage(i18nc("@info", "Text extraction failed."), true);
+            return;
+        }
+        if (text.isEmpty()) {
+            showOcrMessage(i18nc("@info", "No text found in the image."));
+            return;
+        }
+        showOcrMessage(i18nc("@info", "The extracted text has been copied to the clipboard."));
+
+        // ensure program stays alive until the notification finishes.
+        if (!m_eventLoopLocker) {
+            m_eventLoopLocker = std::make_unique<QEventLoopLocker>();
+        }
+
+        auto notification = new KNotification(u"ocrTextExtracted"_s, KNotification::CloseOnTimeout, nullptr);
+        notification->setTitle(i18nc("@info:notification title", "Text Extracted"));
+        notifications.append(notification);
+
+        const auto languageNames = OcrManager::instance()->availableLanguagesWithNames();
+        QStringList displayLanguages;
+        for (const QString &code : languageCodes) {
+            const QString displayName = languageNames.value(code, code);
+            if (!displayLanguages.contains(displayName)) {
+                displayLanguages.append(displayName);
+            }
+        }
+        notification->setText(xi18nc("@info", "Text copied to clipboard.<nl/>Languages used: %1", displayLanguages.join(u", "_s)));
+        notification->setIconName(u"document-scan"_s);
+
+        auto openEditorAction = notification->addAction(i18nc("@action:button", "Open in Text Editor"));
+        connect(openEditorAction, &KNotificationAction::activated, this, [text, notification]() {
+            auto exportManager = ExportManager::instance();
+            exportManager->updateTimestamp();
+            const QString filename = u"spectacle_ocr_%1_XXXXXX.txt"_s.arg(exportManager->timestamp().toString(u"yyyyMMdd_HHmmss"_s));
+            QTemporaryFile tempFile(QDir::tempPath() + u'/' + filename);
+            tempFile.setAutoRemove(false);
+            if (tempFile.open()) {
+                QTextStream stream(&tempFile);
+                stream << text;
+                tempFile.close();
+                auto job = new KIO::OpenUrlJob(QUrl::fromLocalFile(tempFile.fileName()));
+                job->setStartupId(notification->xdgActivationToken().toUtf8());
+                job->setDeleteTemporaryFile(true);
+                job->start();
+            }
+            notification->close();
+        });
+
+        auto onExpired = [this, notification] {
+            notifications.removeOne(static_cast<KNotification *>(notification));
+            if (notifications.empty() && m_eventLoopLocker) {
+                QTimer::singleShot(250, this, [this] {
+                    m_eventLoopLocker.reset();
+                });
+            }
+        };
+        connect(notification, &QObject::destroyed, this, onExpired);
+        // Keep the app running a while so the notification's action still works from the history.
+        QTimer::singleShot(180000, notification, onExpired);
+
+        notification->sendEvent();
+    };
+    connect(OcrManager::instance(), &OcrManager::textRecognized, this, onOcrTextRecognized);
+    connect(OcrManager::instance(), &OcrManager::statusChanged, this, [this](OcrManager::OcrStatus) {
+        Q_EMIT ocrStatusChanged();
+    });
+
     connect(exportManager, &ExportManager::errorMessage, this, &SpectacleCore::showErrorMessage);
 
     connect(m_annotationDocument.get(), &AnnotationDocument::repaintNeeded, m_annotationSyncTimer.get(), qOverload<>(&QTimer::start));
@@ -495,6 +575,71 @@ SpectacleCore::SpectacleCore(QObject *parent)
             m_captureWindows.erase(it);
         }
     });
+}
+
+bool SpectacleCore::ocrAvailable() const
+{
+    return OcrManager::instance()->isAvailable();
+}
+
+OcrManager::OcrStatus SpectacleCore::ocrStatus() const
+{
+    return OcrManager::instance()->status();
+}
+
+bool SpectacleCore::startOcrExtraction(const QString &languageCode)
+{
+    if (m_videoMode) {
+        return false;
+    }
+
+    if (!CaptureWindow::instances().isEmpty()) {
+        // In the region overlay: accept the selection (which opens the viewer), then read it.
+        m_ocrExportInProgress = true;
+        if (!SelectionEditor::instance()->acceptSelection(ExportManager::UserAction)) {
+            m_ocrExportInProgress = false;
+            return false;
+        }
+        QMetaObject::invokeMethod(
+            this,
+            [this, languageCode]() {
+                performOcrExtraction(languageCode);
+            },
+            Qt::QueuedConnection);
+        return true;
+    }
+
+    return performOcrExtraction(languageCode);
+}
+
+bool SpectacleCore::performOcrExtraction(const QString &languageCode)
+{
+    auto ocrManager = OcrManager::instance();
+    if (!ocrManager->isAvailable()) {
+        showOcrMessage(i18nc("@info", "OCR is not available. Install Tesseract language data (e.g. tesseract-ocr-eng)."), true);
+        return false;
+    }
+
+    const QImage image = m_annotationDocument->renderToImage();
+    if (image.isNull()) {
+        showOcrMessage(i18nc("@info", "No screenshot available."), true);
+        return false;
+    }
+
+    showOcrMessage(i18nc("@info", "Extracting text from image…"));
+    if (languageCode.isEmpty()) {
+        ocrManager->recognizeText(image);
+    } else {
+        ocrManager->recognizeTextWithLanguage(image, languageCode);
+    }
+    return true;
+}
+
+void SpectacleCore::showOcrMessage(const QString &text, bool error)
+{
+    if (auto viewer = ViewerWindow::instance()) {
+        viewer->showOcrMessage(text, error);
+    }
 }
 
 SpectacleCore::~SpectacleCore() noexcept
@@ -936,7 +1081,6 @@ void SpectacleCore::showViewerIfGuiMode(bool minimized)
     }
 }
 
-static QList<KNotification *> notifications;
 
 void SpectacleCore::doNotify(ScreenCapture type, const ExportManager::Actions &actions, const QUrl &saveUrl)
 {
