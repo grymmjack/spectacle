@@ -83,6 +83,8 @@ public Q_SLOTS:
     virtual void save();
     virtual void saveAs();
     virtual void copyImage();
+    // Copy at 25, 50 or 200 percent of the screenshot's size.
+    virtual void copyImageScaled(int percent);
     virtual void copyLocation();
     virtual void copyToClipboard(const QVariant &content);
     void showPrintDialog();

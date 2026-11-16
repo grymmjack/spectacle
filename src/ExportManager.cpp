@@ -404,6 +404,20 @@ QString ExportManager::imageFileSuffix(const QUrl &url) const
     return type;
 }
 
+ExportManager::Action ExportManager::copyScaleAction(int percent)
+{
+    switch (percent) {
+    case 25:
+        return CopyScale25;
+    case 50:
+        return CopyScale50;
+    case 200:
+        return CopyScale200;
+    default:
+        return NoActions;
+    }
+}
+
 QImage scaledImageFromSubGeometry(const QImage &image)
 {
     const auto subGeometryList = ImageMetaData::subGeometryList(image);
@@ -683,6 +697,13 @@ void ExportManager::exportImage(ExportManager::Actions actions, QUrl url)
         }
         // We want to reuse this image to waste less CPU.
         auto image = scaledImageFromSubGeometry(m_saveImage);
+        const qreal copyScale = actions & CopyScale25 ? 0.25 : actions & CopyScale50 ? 0.5 : actions & CopyScale200 ? 2.0 : 1.0;
+        if (copyScale != 1.0) {
+            const QSize scaledSize = (QSizeF(image.size()) * copyScale).toSize().expandedTo({1, 1});
+            // Enlarging is for pixel art, so keep hard pixel edges (each pixel becomes 2x2);
+            // shrinking averages pixels so text stays readable.
+            image = image.scaled(scaledSize, Qt::IgnoreAspectRatio, copyScale > 1 ? Qt::FastTransformation : Qt::SmoothTransformation);
+        }
         writer.write(image);
         buffer.reset();
         // Set first so that it gets chosen first.

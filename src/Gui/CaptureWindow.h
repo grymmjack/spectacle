@@ -37,6 +37,7 @@ public Q_SLOTS:
     void save() override;
     void saveAs() override;
     void copyImage() override;
+    void copyImageScaled(int percent) override;
     void copyLocation() override;
 
 Q_SIGNALS:

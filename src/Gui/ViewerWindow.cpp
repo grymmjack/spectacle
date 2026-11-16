@@ -36,6 +36,14 @@ ViewerWindow::ViewerWindow(Mode mode, QQmlEngine *engine, QWindow *parent)
     new QShortcut(QKeySequence::Save, this, this, &ViewerWindow::save);
     new QShortcut(QKeySequence::SaveAs, this, this, &ViewerWindow::saveAs);
     new QShortcut(QKeySequence::Copy, this, this, &ViewerWindow::copyImage);
+    // Copy scaled: 50% Ctrl+Shift+C, 25% Ctrl+Alt+C, 200% Ctrl+Alt+Shift+C
+    for (const auto &[keys, percent] : {std::pair{QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C), 50},
+                                         {QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C), 25},
+                                         {QKeySequence(Qt::CTRL | Qt::ALT | Qt::SHIFT | Qt::Key_C), 200}}) {
+        new QShortcut(keys, this, this, [this, percent] {
+            copyImageScaled(percent);
+        });
+    }
     new QShortcut(QKeySequence::Print, this, this, &ViewerWindow::showPrintDialog);
 
     m_context->setContextObject(this); // Must be before QML is initialized

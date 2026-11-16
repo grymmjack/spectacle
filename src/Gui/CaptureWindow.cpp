@@ -29,6 +29,14 @@ CaptureWindow::CaptureWindow(Mode mode, QScreen *screen, QQmlEngine *engine, QWi
     new QShortcut(QKeySequence::Save, this, this, &CaptureWindow::save);
     new QShortcut(QKeySequence::SaveAs, this, this, &CaptureWindow::saveAs);
     new QShortcut(QKeySequence::Copy, this, this, &CaptureWindow::copyImage);
+    // Copy scaled: 50% Ctrl+Shift+C, 25% Ctrl+Alt+C, 200% Ctrl+Alt+Shift+C
+    for (const auto &[keys, percent] : {std::pair{QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_C), 50},
+                                         {QKeySequence(Qt::CTRL | Qt::ALT | Qt::Key_C), 25},
+                                         {QKeySequence(Qt::CTRL | Qt::ALT | Qt::SHIFT | Qt::Key_C), 200}}) {
+        new QShortcut(keys, this, this, [this, percent] {
+            copyImageScaled(percent);
+        });
+    }
     new QShortcut(QKeySequence::Print, this, this, &CaptureWindow::showPrintDialog);
 
     m_context->setContextObject(this); // Must be before QML is initialized
@@ -151,6 +159,11 @@ void CaptureWindow::saveAs()
 void CaptureWindow::copyImage()
 {
     SelectionEditor::instance()->acceptSelection(ExportManager::CopyImage | ExportManager::UserAction);
+}
+
+void CaptureWindow::copyImageScaled(int percent)
+{
+    SelectionEditor::instance()->acceptSelection(ExportManager::CopyImage | ExportManager::copyScaleAction(percent) | ExportManager::UserAction);
 }
 
 void CaptureWindow::copyLocation()

@@ -43,11 +43,19 @@ public:
         CopyImage   = 0b00100,
         CopyPath    = 0b01000,
         UserAction  = 0b10000,
+        // Modifiers for CopyImage: copy scaled. Smaller for chat apps with upload limits
+        // (Discord), bigger for pixel art. See copyScaleAction().
+        CopyScale25  = 0b00100000,
+        CopyScale50  = 0b01000000,
+        CopyScale200 = 0b10000000,
         AnySave     = Save | SaveAs,
         AnyAction   = AnySave | CopyImage | CopyPath,
     };
     Q_DECLARE_FLAGS(Actions, Action)
     Q_FLAG(Action)
+
+    // The CopyScale flag for a copy at this size (25, 50 or 200 percent); NoActions otherwise.
+    static Action copyScaleAction(int percent);
 
     static QString defaultSaveLocation();
     static QString defaultVideoSaveLocation();

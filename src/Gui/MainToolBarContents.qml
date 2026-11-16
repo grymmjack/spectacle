@@ -63,13 +63,39 @@ ButtonGrid {
         onClicked: contextWindow.saveAs()
     }
 
-    // We don't show this in video mode because you can't copy raw video to the clipboard,
-    // or at least not elegantly.
-    ToolButton {
+    // Copy: [25%] [50%] [100%] [200%]. Smaller for chat apps with upload limits (Discord),
+    // 200% with sharp pixels for pixel art. Not in video mode: you can't copy raw video to the
+    // clipboard, or at least not elegantly.
+    component CopyPercentButton: QQC.ToolButton {
+        required property int percent
+        required property string shortcut
+        implicitHeight: QmlUtils.iconTextButtonHeight
+        leftPadding: Kirigami.Units.smallSpacing
+        rightPadding: Kirigami.Units.smallSpacing
+        focusPolicy: root.focusPolicy
+        display: QQC.AbstractButton.TextOnly
+        text: i18nc("@action:button percent of the screenshot's size", "%1%", percent)
+        QQC.ToolTip.text: i18nc("@info:tooltip", "Copy at %1% of the size (%2)", percent, shortcut)
+        QQC.ToolTip.visible: hovered || pressed
+        QQC.ToolTip.delay: Kirigami.Units.toolTipDelay
+        onClicked: percent === 100 ? contextWindow.copyImage() : contextWindow.copyImageScaled(percent)
+    }
+    Grid {
         visible: !SpectacleCore.videoMode
-        icon.name: "edit-copy"
-        text: i18n("Copy")
-        onClicked: contextWindow.copyImage()
+        flow: root.flow
+        rows: root.flow === Grid.LeftToRight ? 1 : -1
+        columns: root.flow === Grid.LeftToRight ? -1 : 1
+        QQC.Label {
+            height: QmlUtils.iconTextButtonHeight
+            leftPadding: Kirigami.Units.mediumSpacing
+            rightPadding: Kirigami.Units.smallSpacing
+            verticalAlignment: Text.AlignVCenter
+            text: i18nc("@label followed by buttons to copy the screenshot at a size", "Copy:")
+        }
+        CopyPercentButton { percent: 25; shortcut: "Ctrl+Alt+C" }
+        CopyPercentButton { percent: 50; shortcut: "Ctrl+Shift+C" }
+        CopyPercentButton { percent: 100; shortcut: "Ctrl+C" }
+        CopyPercentButton { percent: 200; shortcut: "Ctrl+Alt+Shift+C" }
     }
 
     // We only show this in video mode to save space in screenshot mode

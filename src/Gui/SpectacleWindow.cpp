@@ -258,6 +258,12 @@ void SpectacleWindow::copyImage()
     ExportManager::instance()->exportImage(ExportManager::CopyImage | ExportManager::UserAction);
 }
 
+void SpectacleWindow::copyImageScaled(int percent)
+{
+    SpectacleCore::instance()->syncExportImage();
+    ExportManager::instance()->exportImage(ExportManager::CopyImage | ExportManager::copyScaleAction(percent) | ExportManager::UserAction);
+}
+
 void SpectacleWindow::copyLocation()
 {
     if (SpectacleCore::instance()->videoMode()) {
